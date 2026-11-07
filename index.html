@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ネタストック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column like a phone screen — reward progress first, then the entry form, the stock list, and the connections notebook. */
+:root {
+  --bg: #F2F4F6;
+  --surface: #FFFFFF;
+  --fg: #161A22;
+  --muted: #5C6472;
+  --line: #DADFE6;
+  --accent: #1A6FD8;
+  --accent-soft: #E1EDFB;
+  --idea: #6B4FC4;
+  --idea-soft: #ECE7FA;
+  --draft: #A0670E;
+  --draft-soft: #F8EDD9;
+  --done: #2E7D4F;
+  --done-soft: #DFF1E6;
+  --warn: #C0392B;
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11141A; --surface: #1A1E26; --fg: #ECEEF2; --muted: #A0A8B6; --line: #2E3440;
+    --accent: #6FA8F0; --accent-soft: #19283C;
+    --idea: #B3A0F0; --idea-soft: #261F3C; --draft: #E5B061; --draft-soft: #33281A;
+    --done: #74C894; --done-soft: #1B3025; --warn: #F08072;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11141A; --surface: #1A1E26; --fg: #ECEEF2; --muted: #A0A8B6; --line: #2E3440;
+  --accent: #6FA8F0; --accent-soft: #19283C;
+  --idea: #B3A0F0; --idea-soft: #261F3C; --draft: #E5B061; --draft-soft: #33281A;
+  --done: #74C894; --done-soft: #1B3025; --warn: #F08072;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  padding-inline: 16px;
+  padding-block: 24px 64px;
+}
+.wrap { max-width: 680px; margin-inline: auto; display: flex; flex-direction: column; gap: 28px; }
+
+header { display: flex; flex-direction: column; gap: 4px; }
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-size: 30px; line-height: 1.2; margin: 0; letter-spacing: 0.02em; }
+h1 .dot { color: var(--accent); }
+.for { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; }
+.lead { margin: 0; color: var(--muted); font-size: 14px; }
+
+h2 { font-family: var(--font-display); font-size: 18px; margin: 0; text-wrap: balance; }
+.section { display: flex; flex-direction: column; gap: 12px; }
+.section-note { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Reward progress */
+.progress { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 18px; }
+.streak { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.streak-num { font-family: var(--font-display); font-size: 40px; line-height: 1; }
+.streak-num small { font-family: var(--font-body); font-size: 15px; margin-left: 4px; color: var(--muted); }
+.streak-label { font-size: 13px; color: var(--muted); font-weight: 700; letter-spacing: 0.04em; }
+.streak-msg { font-size: 13px; margin: 4px 0 0; }
+.streak-msg.todo { color: var(--draft); font-weight: 700; }
+.streak-msg.ok { color: var(--done); font-weight: 700; }
+.days { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; width: 100%; max-width: 330px; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--font-num); font-size: 9px; color: var(--muted); }
+.day i { display: block; width: 100%; aspect-ratio: 1; max-width: 20px; border-radius: 5px; background: var(--line); }
+.day.on i { background: var(--done); }
+.day.today i { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.goals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .goals { grid-template-columns: 1fr; } }
+.goal { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.goal-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; }
+.goal-badge { font-size: 11px; border-radius: 999px; padding: 0 8px; font-weight: 700; white-space: nowrap; }
+.goal-badge.met { background: var(--done-soft); color: var(--done); }
+.goal-badge.not { background: var(--draft-soft); color: var(--draft); }
+.goal-row { display: flex; align-items: center; gap: 6px; font-family: var(--font-num); font-size: 13px; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.goal-row input[type="number"] { width: 9em; font-family: var(--font-num); font-size: 14px; padding: 4px 8px; }
+.bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar b { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.bar.met b { background: var(--done); }
+.goal small { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* Forms */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.panel.editing { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.field-row .field { flex: 1 1 160px; }
+label, .label { font-weight: 700; font-size: 14px; }
+.req { color: var(--accent); font-size: 12px; margin-left: 6px; font-weight: 500; }
+.hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+input[type="text"], input[type="search"], input[type="number"], input[type="date"], textarea {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+}
+textarea { min-height: 120px; resize: vertical; line-height: 1.75; }
+#f-draft { min-height: 170px; }
+input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.error { color: var(--warn); font-size: 13px; margin: 0; }
+.invalid { border-color: var(--warn) !important; }
+
+.meter { display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--font-num); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter .long { color: var(--draft); font-weight: 700; }
+.meter .over { color: var(--warn); font-weight: 700; }
+
+.pick { display: flex; gap: 8px; flex-wrap: wrap; }
+.pick input { position: absolute; opacity: 0; pointer-events: none; }
+.pick label { font-weight: 500; cursor: pointer; border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; font-size: 14px; background: var(--bg); }
+.pick input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pick input[value="idea"]:checked + label { background: var(--idea-soft); color: var(--idea); border-color: var(--idea); }
+.pick input[value="draft"]:checked + label { background: var(--draft-soft); color: var(--draft); border-color: var(--draft); }
+.pick input[value="done"]:checked + label { background: var(--done-soft); color: var(--done); border-color: var(--done); }
+.pick input[name="ctype"]:checked + label { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+button { font: inherit; cursor: pointer; border-radius: 10px; padding: 8px 16px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+button.primary:hover { filter: brightness(1.06); }
+button.small { padding: 4px 12px; font-size: 13px; border-radius: 8px; }
+button.danger { color: var(--warn); }
+button.link { border: none; background: none; padding: 4px 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Lists */
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.tab { border: none; border-radius: 0; background: none; padding: 8px 12px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
+.tab .n { font-family: var(--font-num); font-size: 12px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+
+.cards { display: flex; flex-direction: column; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-top { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.small-label { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); display: block; }
+.theme { font-weight: 700; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; margin: 0; }
+.pill { flex: none; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.pill.idea { background: var(--idea-soft); color: var(--idea); }
+.pill.draft { background: var(--draft-soft); color: var(--draft); }
+.pill.done { background: var(--done-soft); color: var(--done); }
+.pill.ctype { background: var(--accent-soft); color: var(--accent); }
+.sample { font-size: 11px; color: var(--accent); border: 1px dashed var(--accent); border-radius: 6px; padding: 0 6px; margin-left: 6px; vertical-align: 2px; font-weight: 500; }
+
+.exp { margin: 0; font-size: 13px; border-left: 3px solid var(--idea); padding: 2px 0 2px 10px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.post { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; margin: 0; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.post .hidden-part { color: var(--muted); }
+.fold { display: block; font-size: 11px; color: var(--accent); border-top: 1px dashed var(--accent); margin: 6px 0 4px; padding-top: 2px; letter-spacing: 0.05em; }
+.post.empty { color: var(--muted); }
+.card-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.card-foot .meter { flex: 1 1 auto; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.result { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; background: var(--done-soft); border-radius: 10px; padding: 8px 12px; }
+.result label { font-size: 13px; }
+.result input { width: 8.5em; padding: 4px 8px; font-family: var(--font-num); font-size: 13px; background: var(--surface); }
+.result input[type="date"] { width: auto; font-family: var(--font-body); }
+.rank { font-family: var(--font-num); font-size: 12px; color: var(--done); font-weight: 700; }
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; background: var(--accent-soft); border-radius: 10px; padding: 8px 12px; }
+
+.empty-state { text-align: center; color: var(--muted); padding: 28px 16px; border: 1px dashed var(--line); border-radius: 14px; }
+
+/* Backup */
+details.backup { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; }
+details.backup summary { cursor: pointer; font-weight: 700; }
+details.backup .inner { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+details.backup p { margin: 0; font-size: 13px; color: var(--muted); }
+details.backup textarea { min-height: 100px; font-family: var(--font-num); font-size: 12px; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 18px; border-radius: 999px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.18); max-width: calc(100% - 32px); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: rise .2s ease-out; }
+  @keyframes rise { from { transform: translate(-50%, 8px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>ネタストック<span class="dot">.</span></h1>
+      <span class="for">X 体験談ネタ帳</span>
+    </div>
+    <p class="lead">自分だけの体験を、ブルーバッジの人に届く投稿へ。毎日の投稿と、オリジナルコンテンツ報酬への進み具合を1か所で管理します。</p>
+  </header>
+
+  <!-- 報酬への進み具合 -->
+  <section class="section" aria-labelledby="progress-title">
+    <h2 id="progress-title">報酬への進み具合</h2>
+    <div class="progress">
+      <div class="streak">
+        <div>
+          <span class="streak-label">毎日投稿</span>
+          <div class="streak-num" id="streak-num">0<small>日連続</small></div>
+          <p class="streak-msg" id="streak-msg"></p>
+        </div>
+        <div class="days" id="days" aria-label="直近14日の投稿"></div>
+      </div>
+      <div class="goals">
+        <div class="goal">
+          <div class="goal-head"><span>ブルーバッジのフォロワー</span><span class="goal-badge" id="g1-badge"></span></div>
+          <div class="goal-row"><input type="number" id="g-verified" min="0" inputmode="numeric" aria-label="ブルーバッジのフォロワー数"> / 500人</div>
+          <div class="bar" id="g1-bar"><b></b></div>
+          <small>申し込みに必要な人数です。</small>
+        </div>
+        <div class="goal">
+          <div class="goal-head"><span>ブルーバッジからのホーム表示（90日）</span><span class="goal-badge" id="g2-badge"></span></div>
+          <div class="goal-row"><input type="number" id="g-reach" min="0" inputmode="numeric" aria-label="90日間のブルーバッジからのホーム表示回数"> / 500,000回</div>
+          <div class="bar" id="g2-bar"><b></b></div>
+          <small>クリエイタースタジオで見た数字を入れてください。返信欄の表示は数えません。50万回は報道ベースの目安です。</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ネタの入力 -->
+  <form class="panel" id="entry-form" novalidate>
+    <h2 id="form-title">新しいネタを追加</h2>
+
+    <div class="field">
+      <label for="f-theme">書くテーマ<span class="req">必須</span></label>
+      <input type="text" id="f-theme" maxlength="120" placeholder="例：オフ会で初めて会った人に言われた一言" autocomplete="off">
+      <p class="error" id="theme-error" hidden>書くテーマを入力してください。テーマが決まっていないネタは保存できません。</p>
+    </div>
+
+    <div class="field">
+      <label for="f-exp">自分だけの体験・気づき<span class="req">必須</span> <span class="hint">（あなたにしか書けない部分）</span></label>
+      <textarea id="f-exp" placeholder="実際にあったこと、そのとき感じたこと、具体的な数字や場面"></textarea>
+      <p class="error" id="exp-error" hidden>自分だけの体験・気づきを書いてください。ここがオリジナルコンテンツの中心になります。</p>
+    </div>
+
+    <div class="field">
+      <label for="f-draft">投稿文の下書き <span class="hint">（あとから書いてもOK）</span></label>
+      <textarea id="f-draft" placeholder="Xに投稿する文章"></textarea>
+      <div class="meter" id="form-meter" aria-live="polite"></div>
+    </div>
+
+    <div class="field">
+      <span class="label" id="status-label">状態</span>
+      <div class="pick" role="radiogroup" aria-labelledby="status-label">
+        <input type="radio" name="status" id="s-idea" value="idea" checked><label for="s-idea">アイデア</label>
+        <input type="radio" name="status" id="s-draft" value="draft"><label for="s-draft">下書き</label>
+        <input type="radio" name="status" id="s-done" value="done"><label for="s-done">投稿済み</label>
+      </div>
+    </div>
+
+    <div class="field-row" id="done-fields" hidden>
+      <div class="field">
+        <label for="f-posted">投稿した日</label>
+        <input type="date" id="f-posted">
+      </div>
+      <div class="field">
+        <label for="f-imps">表示回数</label>
+        <input type="number" id="f-imps" min="0" inputmode="numeric" placeholder="わかれば">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="primary" id="submit-btn">ストックに追加</button>
+      <button type="button" class="link" id="cancel-edit" hidden>編集をやめる</button>
+    </div>
+  </form>
+
+  <!-- ネタ一覧 -->
+  <section class="section" aria-labelledby="list-title">
+    <h2 id="list-title">ストック</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <input type="search" id="search" placeholder="テーマや体験の言葉で探す" aria-label="ネタを検索">
+    <p class="section-note" id="list-note" hidden>投稿済みは、表示回数が多い順に並んでいます。よく見られた投稿の「体験」の書き方を、次のネタに生かしましょう。</p>
+    <ul class="cards" id="cards"></ul>
+  </section>
+
+  <!-- 仲間・オフ会・相談 -->
+  <section class="section" aria-labelledby="conn-title">
+    <h2 id="conn-title">仲間・オフ会・相談</h2>
+    <p class="section-note">出会った人、参加したオフ会、相談したいことを書きとめます。「ネタにする」を押すと、その体験から投稿ネタを作れます。</p>
+    <form class="panel" id="conn-form" novalidate>
+      <div class="field">
+        <span class="label" id="ctype-label">種類</span>
+        <div class="pick" role="radiogroup" aria-labelledby="ctype-label">
+          <input type="radio" name="ctype" id="c-friend" value="friend" checked><label for="c-friend">仲間</label>
+          <input type="radio" name="ctype" id="c-meetup" value="meetup"><label for="c-meetup">オフ会</label>
+          <input type="radio" name="ctype" id="c-consult" value="consult"><label for="c-consult">相談</label>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="c-name" id="c-name-label">名前・アカウント<span class="req">必須</span></label>
+          <input type="text" id="c-name" maxlength="80" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="c-date">日付</label>
+          <input type="date" id="c-date">
+        </div>
+      </div>
+      <p class="error" id="cname-error" hidden>名前・タイトルを入力してください。</p>
+      <div class="field">
+        <label for="c-memo">メモ</label>
+        <textarea id="c-memo" placeholder="話したこと、教わったこと、気づいたこと"></textarea>
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">メモを追加</button>
+      </div>
+    </form>
+    <ul class="cards" id="conn-cards"></ul>
+  </section>
+
+  <details class="backup">
+    <summary>バックアップと復元</summary>
+    <div class="inner">
+      <p>ネタはこのブラウザの中だけに保存されます。ブラウザの履歴を消したり、別のスマホで開いたりすると見えなくなります。ときどき下のボタンでバックアップをコピーして、メモアプリなどに貼っておくと安心です。</p>
+      <div class="actions">
+        <button type="button" id="export-btn">バックアップをコピー</button>
+      </div>
+      <label for="import-text">復元する（コピーしておいたバックアップを貼り付け）</label>
+      <textarea id="import-text" placeholder="ここにバックアップを貼り付け"></textarea>
+      <div class="actions">
+        <button type="button" id="import-btn">貼り付けた内容で復元</button>
+      </div>
+      <p class="error" id="import-error" hidden></p>
+    </div>
+  </details>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "netastock.x.v1";
+  var OLD_KEY = "netastock.v1";       // Instagram 版のデータ
+  var FOLD_WEIGHT = 280;              // X で「さらに表示」になる長さ（日本語は1文字=2）
+  var PREMIUM_MAX = 25000;            // Premium の長文投稿の上限（文字数）
+  var GOAL_VERIFIED = 500;
+  var GOAL_REACH = 500000;
+  var STATUS = {
+    idea:  { name: "アイデア", next: "draft", nextLabel: "下書きにする" },
+    draft: { name: "下書き",   next: "done",  nextLabel: "投稿済みにする" },
+    done:  { name: "投稿済み", next: null,    nextLabel: "" }
+  };
+  var CTYPE = {
+    friend:  { name: "仲間",   label: "名前・アカウント", theme: "" },
+    meetup:  { name: "オフ会", label: "オフ会の名前",     theme: "" },
+    consult: { name: "相談",   label: "相談したいこと",   theme: "" }
+  };
+
+  // ---- 日付 ----
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function daysAgo(n) { var d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - n); return d; }
+  function today() { return ymd(new Date()); }
+  function fmtDate(s) {
+    if (!s) return "";
+    var p = s.slice(0, 10).split("-");
+    return p.length === 3 ? (+p[1]) + "/" + (+p[2]) : "";
+  }
+  function now() { return new Date().toISOString(); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  // ---- 見本 ----
+  function samples() {
+    return {
+      items: [
+        { theme: "オフ会で初めて会った人に言われた一言", status: "draft",
+          exp: "初対面の人に「投稿の印象と全然違いますね」と言われた。文章だと強く見えていたらしい。帰り道で、伝え方を少し変えようと決めた。",
+          draft: "先週のオフ会で、初対面の人に言われた一言。\n\n「投稿の印象と全然ちがいますね」\n\n文章だと、思っていたより強く見えていたみたいです。\n直接会うと、自分の発信のクセに気づけます。\n\nオフ会に行くか迷っている人は、一度行ってみてほしい。" },
+        { theme: "毎朝のコンビニコーヒーをやめて1か月", status: "idea",
+          exp: "1日150円×30日で4,500円。お金よりも、家で淹れる5分が考えごとの時間になったのが大きかった。", draft: "" },
+        { theme: "相談して3日悩んだことが10分で解決した話", status: "done", postedAt: ymd(daysAgo(1)), imps: 48200,
+          exp: "投稿の時間帯で3日悩んでいた。仲間に聞いたら「自分が読む時間に出せばいい」と即答。そこから毎朝7時に固定した。",
+          draft: "3日悩んでいたことが、仲間に聞いたら10分で解決した。\n\n「自分がXを見る時間に出せばいいよ」\n\n一人で考えるより、聞いたほうが早い。\n相談できる仲間がいるのは、発信を続ける一番の力です。" },
+        { theme: "16,800人にフォローされて変わったこと・変わらないこと", status: "done", postedAt: ymd(daysAgo(2)), imps: 21500,
+          exp: "変わったこと：反応が早くなった。変わらないこと：書く前に毎回ドキドキすること。", draft: "" }
+      ],
+      conns: [
+        { type: "meetup", name: "発信者オフ会（渋谷）", date: ymd(daysAgo(6)), memo: "8人参加。投稿の印象と実際の印象のちがいの話でもりあがった。" },
+        { type: "consult", name: "長文投稿は何文字くらいがいい？", date: "", memo: "次に仲間に会ったときに聞く。" }
+      ]
+    };
+  }
+
+  // ---- 保存（使えないブラウザでも画面は動くようにする）----
+  var storageOk = true;
+  var state = null;
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw !== null) {
+        var d = JSON.parse(raw);
+        if (d && Array.isArray(d.items) && Array.isArray(d.conns)) return d;
+      }
+    } catch (e) { storageOk = false; }
+    return null;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) {
+      if (storageOk) { storageOk = false; toast("このブラウザでは保存できません。ページを閉じると消えてしまいます。"); }
+    }
+  }
+  function fresh() {
+    var s = samples(), t = now();
+    return {
+      verified: 1700, reach: null,
+      items: s.items.map(function (x) {
+        return { id: uid(), theme: x.theme, exp: x.exp, draft: x.draft, status: x.status, postedAt: x.postedAt || "", imps: x.imps == null ? null : x.imps, sample: true, createdAt: t, updatedAt: t };
+      }),
+      conns: s.conns.map(function (c) { return { id: uid(), type: c.type, name: c.name, date: c.date, memo: c.memo, sample: true, createdAt: t }; })
+    };
+  }
+
+  state = load();
+  if (!state) {
+    state = fresh();
+    // Instagram 版で書いたネタがあれば引き継ぐ（見本は除く）
+    try {
+      var old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+      if (Array.isArray(old)) {
+        old.filter(function (x) { return x && !x.sample && x.theme; }).forEach(function (x) {
+          state.items.push({ id: uid(), theme: x.theme, exp: "", draft: x.caption || "", status: STATUS[x.status] ? x.status : "idea",
+            postedAt: x.status === "done" ? (x.updatedAt || "").slice(0, 10) : "", imps: null, createdAt: x.createdAt || now(), updatedAt: x.updatedAt || now() });
+        });
+      }
+    } catch (e) {}
+    save();
+  }
+
+  // ---- X の文字数（日本語・絵文字は1文字=2、URLは23）----
+  function xWeight(text) {
+    var t = text || "", w = 0;
+    t = t.replace(/https?:\/\/\S+/g, function () { w += 23; return ""; });
+    Array.from(t).forEach(function (ch) {
+      var c = ch.codePointAt(0);
+      var light = (c <= 4351) || (c >= 8192 && c <= 8205) || (c >= 8208 && c <= 8223) || (c >= 8242 && c <= 8247);
+      w += light ? 1 : 2;
+    });
+    return w;
+  }
+  // 280 を超える位置で文章を2つに分ける（URL は簡単のため通常の文字として扱う）
+  function splitAtFold(text) {
+    var chars = Array.from(text), w = 0;
+    for (var i = 0; i < chars.length; i++) {
+      var c = chars[i].codePointAt(0);
+      var light = (c <= 4351) || (c >= 8192 && c <= 8205) || (c >= 8208 && c <= 8223) || (c >= 8242 && c <= 8247);
+      w += light ? 1 : 2;
+      if (w > FOLD_WEIGHT) return [chars.slice(0, i).join(""), chars.slice(i).join("")];
+    }
+    return [text, ""];
+  }
+  function meterHtml(text) {
+    var w = xWeight(text), len = Array.from(text || "").length;
+    var parts = ['<span class="' + (w > FOLD_WEIGHT ? "long" : "") + '">' + w.toLocaleString() + " / " + FOLD_WEIGHT + "（日本語は1文字=2）</span>"];
+    if (len > PREMIUM_MAX) parts.push('<span class="over">長すぎます（' + PREMIUM_MAX.toLocaleString() + "文字まで）</span>");
+    else if (w > FOLD_WEIGHT) parts.push('<span class="long">長文：タイムラインでは「さらに表示」で折りたたまれます</span>');
+    return parts.join("");
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function num(v) { return v == null || v === "" ? "" : Number(v).toLocaleString(); }
+  function parseNum(v) { if (v === "" || v == null) return null; var n = Math.floor(Number(v)); return isFinite(n) && n >= 0 ? n : null; }
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- 報酬への進み具合 ----
+  function postedDays() {
+    var set = {};
+    state.items.forEach(function (x) { if (x.status === "done" && x.postedAt) set[x.postedAt.slice(0, 10)] = true; });
+    return set;
+  }
+  function renderProgress() {
+    var set = postedDays();
+    var postedToday = !!set[today()];
+    var streak = 0, start = postedToday ? 0 : 1;
+    for (var i = start; i < 3650; i++) { if (set[ymd(daysAgo(i))]) streak++; else break; }
+    $("streak-num").innerHTML = streak + "<small>日連続</small>";
+    var msg = $("streak-msg");
+    if (postedToday) { msg.className = "streak-msg ok"; msg.textContent = "今日の投稿は完了しています。"; }
+    else if (streak > 0) { msg.className = "streak-msg todo"; msg.textContent = "今日はまだ投稿していません。今日投稿すると " + (streak + 1) + " 日連続です。"; }
+    else { msg.className = "streak-msg todo"; msg.textContent = "今日投稿して、連続記録をスタートしましょう。"; }
+
+    var html = "";
+    for (var d = 13; d >= 0; d--) {
+      var day = daysAgo(d), key = ymd(day);
+      html += '<span class="day' + (set[key] ? " on" : "") + (d === 0 ? " today" : "") + '" title="' + (day.getMonth() + 1) + "/" + day.getDate() + (set[key] ? " 投稿あり" : " 投稿なし") + '"><i></i>' + day.getDate() + "</span>";
+    }
+    $("days").innerHTML = html;
+
+    goal("g1", state.verified, GOAL_VERIFIED);
+    goal("g2", state.reach, GOAL_REACH);
+  }
+  function goal(prefix, value, target) {
+    var badge = $(prefix + "-badge"), bar = $(prefix + "-bar");
+    if (value == null) {
+      badge.className = "goal-badge not"; badge.textContent = "未入力";
+      bar.className = "bar"; bar.firstChild.style.width = "0%";
+      return;
+    }
+    var met = value >= target, pct = Math.min(100, value / target * 100);
+    badge.className = "goal-badge " + (met ? "met" : "not");
+    badge.textContent = met ? "達成" : "あと " + (target - value).toLocaleString();
+    bar.className = "bar" + (met ? " met" : "");
+    bar.firstChild.style.width = pct.toFixed(1) + "%";
+  }
+  $("g-verified").value = state.verified == null ? "" : state.verified;
+  $("g-reach").value = state.reach == null ? "" : state.reach;
+  $("g-verified").addEventListener("input", function (e) { state.verified = parseNum(e.target.value); save(); renderProgress(); });
+  $("g-reach").addEventListener("input", function (e) { state.reach = parseNum(e.target.value); save(); renderProgress(); });
+
+  // ---- ネタの入力 ----
+  var form = $("entry-form"), fTheme = $("f-theme"), fExp = $("f-exp"), fDraft = $("f-draft");
+  var filter = "all", query = "", editingId = null, confirmingId = null, confirmingConn = null;
+  try { var savedTab = localStorage.getItem(KEY + ".tab"); if (savedTab === "all" || STATUS[savedTab]) filter = savedTab; } catch (e) {}
+
+  function updateFormMeter() { $("form-meter").innerHTML = meterHtml(fDraft.value); }
+  fDraft.addEventListener("input", updateFormMeter);
+  fTheme.addEventListener("input", function () { if (fTheme.value.trim()) { fTheme.classList.remove("invalid"); $("theme-error").hidden = true; } });
+  fExp.addEventListener("input", function () { if (fExp.value.trim()) { fExp.classList.remove("invalid"); $("exp-error").hidden = true; } });
+
+  function selectedStatus() { var r = form.querySelector('input[name="status"]:checked'); return r ? r.value : "idea"; }
+  function setStatus(v) { var r = $("s-" + v); if (r) r.checked = true; syncDoneFields(); }
+  function syncDoneFields() {
+    var done = selectedStatus() === "done";
+    $("done-fields").hidden = !done;
+    if (done && !$("f-posted").value) $("f-posted").value = today();
+  }
+  form.addEventListener("change", function (e) { if (e.target.name === "status") syncDoneFields(); });
+
+  function resetForm() {
+    editingId = null;
+    form.reset();
+    setStatus("idea");
+    $("f-posted").value = "";
+    form.classList.remove("editing");
+    $("form-title").textContent = "新しいネタを追加";
+    $("submit-btn").textContent = "ストックに追加";
+    $("cancel-edit").hidden = true;
+    [fTheme, fExp].forEach(function (el) { el.classList.remove("invalid"); });
+    $("theme-error").hidden = true; $("exp-error").hidden = true;
+    updateFormMeter();
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var theme = fTheme.value.trim(), exp = fExp.value.trim(), firstBad = null;
+    if (!theme) { fTheme.classList.add("invalid"); $("theme-error").hidden = false; firstBad = fTheme; }
+    if (!exp) { fExp.classList.add("invalid"); $("exp-error").hidden = false; firstBad = firstBad || fExp; }
+    if (firstBad) { firstBad.focus(); return; }
+    var status = selectedStatus();
+    var postedAt = status === "done" ? ($("f-posted").value || today()) : "";
+    var imps = status === "done" ? parseNum($("f-imps").value) : null;
+    if (editingId) {
+      var it = find(editingId);
+      if (it) {
+        it.theme = theme; it.exp = exp; it.draft = fDraft.value; it.status = status;
+        it.postedAt = postedAt; it.imps = imps; it.updatedAt = now(); delete it.sample;
+      }
+      toast("ネタを更新しました");
+    } else {
+      var t = now();
+      state.items.unshift({ id: uid(), theme: theme, exp: exp, draft: fDraft.value, status: status, postedAt: postedAt, imps: imps, createdAt: t, updatedAt: t });
+      toast("ストックに追加しました");
+    }
+    save(); resetForm(); render();
+  });
+  $("cancel-edit").addEventListener("click", resetForm);
+
+  function find(id) { return state.items.find(function (x) { return x.id === id; }); }
+
+  function startEdit(id) {
+    var it = find(id);
+    if (!it) return;
+    editingId = id;
+    fTheme.value = it.theme; fExp.value = it.exp || ""; fDraft.value = it.draft || "";
+    setStatus(it.status);
+    $("f-posted").value = it.postedAt || (it.status === "done" ? today() : "");
+    $("f-imps").value = it.imps == null ? "" : it.imps;
+    form.classList.add("editing");
+    $("form-title").textContent = "ネタを編集";
+    $("submit-btn").textContent = "変更を保存";
+    $("cancel-edit").hidden = false;
+    updateFormMeter();
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    fTheme.focus({ preventScroll: true });
+  }
+
+  // ---- ネタ一覧 ----
+  function renderTabs() {
+    var counts = { all: state.items.length, idea: 0, draft: 0, done: 0 };
+    state.items.forEach(function (x) { if (counts[x.status] !== undefined) counts[x.status]++; });
+    var defs = [["all", "すべて"], ["idea", "アイデア"], ["draft", "下書き"], ["done", "投稿済み"]];
+    $("tabs").innerHTML = defs.map(function (d) {
+      return '<button type="button" class="tab" role="tab" data-tab="' + d[0] + '" aria-selected="' + (filter === d[0]) + '">' +
+        d[1] + '<span class="n">' + counts[d[0]] + "</span></button>";
+    }).join("");
+  }
+
+  function postHtml(text) {
+    if (!text || !text.trim()) return '<p class="post empty">投稿文はまだありません</p>';
+    var parts = splitAtFold(text);
+    if (!parts[1]) return '<p class="post">' + esc(text) + "</p>";
+    return '<p class="post">' + esc(parts[0]) +
+      '<span class="fold">ここから先は「さらに表示」で折りたたまれます</span>' +
+      '<span class="hidden-part">' + esc(parts[1]) + "</span></p>";
+  }
+
+  function render() {
+    renderProgress();
+    renderTabs();
+    var q = query.trim().toLowerCase();
+    var list = state.items.filter(function (x) {
+      if (filter !== "all" && x.status !== filter) return false;
+      if (!q) return true;
+      return [x.theme, x.exp, x.draft].join("\n").toLowerCase().indexOf(q) !== -1;
+    });
+    if (filter === "done") list.sort(function (a, b) { return (b.imps || 0) - (a.imps || 0); });
+    $("list-note").hidden = filter !== "done";
+    var ul = $("cards");
+    if (!list.length) {
+      var msg = state.items.length === 0
+        ? "まだネタがありません。上のフォームに「書くテーマ」と「自分だけの体験」を入れて、最初のネタを追加しましょう。"
+        : (q ? "「" + esc(query.trim()) + "」に合うネタは見つかりませんでした。" : "この状態のネタはまだありません。");
+      ul.innerHTML = '<li class="empty-state">' + msg + "</li>";
+    } else {
+      ul.innerHTML = list.map(function (x, i) {
+        var st = STATUS[x.status] || STATUS.idea;
+        return '<li class="card" data-id="' + esc(x.id) + '">' +
+          '<div class="card-top"><div><span class="small-label">書くテーマ</span>' +
+            '<p class="theme">' + esc(x.theme) + (x.sample ? '<span class="sample">見本</span>' : "") + "</p></div>" +
+            '<span class="pill ' + esc(x.status) + '">' + st.name + "</span></div>" +
+          (x.exp ? '<div><span class="small-label">自分だけの体験・気づき</span><p class="exp">' + esc(x.exp) + "</p></div>" : "") +
+          postHtml(x.draft) +
+          (x.status === "done" ? '<div class="result">' +
+              (filter === "done" && x.imps ? '<span class="rank">' + (i + 1) + "位</span>" : "") +
+              '<label for="pd-' + esc(x.id) + '">投稿日</label><input type="date" id="pd-' + esc(x.id) + '" data-field="postedAt" value="' + esc(x.postedAt || "") + '">' +
+              '<label for="im-' + esc(x.id) + '">表示回数</label><input type="number" min="0" inputmode="numeric" id="im-' + esc(x.id) + '" data-field="imps" value="' + (x.imps == null ? "" : x.imps) + '" placeholder="未入力">' +
+            "</div>" : "") +
+          '<div class="card-foot"><div class="meter">' + meterHtml(x.draft) + "</div>" +
+            '<div class="card-actions">' +
+              (st.next ? '<button type="button" class="small" data-act="advance">' + st.nextLabel + "</button>" : "") +
+              '<button type="button" class="small" data-act="copy">投稿文をコピー</button>' +
+              '<button type="button" class="small" data-act="edit">編集</button>' +
+              '<button type="button" class="small danger" data-act="delete">削除</button>' +
+            "</div></div>" +
+          (confirmingId === x.id ? '<div class="confirm" role="alert">このネタを削除しますか？元に戻せません。' +
+            '<button type="button" class="small danger" data-act="confirm-delete">削除する</button>' +
+            '<button type="button" class="small" data-act="cancel-delete">やめる</button></div>' : "") +
+          "</li>";
+      }).join("");
+    }
+    renderConns();
+  }
+
+  $("tabs").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-tab]");
+    if (!b) return;
+    filter = b.getAttribute("data-tab");
+    try { localStorage.setItem(KEY + ".tab", filter); } catch (err) {}
+    render();
+  });
+  $("search").addEventListener("input", function (e) { query = e.target.value; render(); });
+
+  $("cards").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]");
+    if (!b) return;
+    var id = b.closest(".card").getAttribute("data-id"), it = find(id);
+    if (!it) return;
+    var act = b.getAttribute("data-act");
+    if (act === "edit") { startEdit(id); return; }
+    if (act === "copy") {
+      if (!it.draft || !it.draft.trim()) { toast("投稿文がまだありません。「編集」から書いてください"); return; }
+      copyText(it.draft, "投稿文をコピーしました。Xに貼り付けできます"); return;
+    }
+    if (act === "advance") {
+      var nx = STATUS[it.status] && STATUS[it.status].next;
+      if (nx) {
+        it.status = nx; it.updatedAt = now();
+        if (nx === "done" && !it.postedAt) it.postedAt = today();
+        save(); toast(nx === "done" ? "投稿済みにしました。表示回数がわかったら記録しましょう" : "「" + STATUS[nx].name + "」にしました");
+      }
+    }
+    if (act === "delete") confirmingId = id;
+    if (act === "cancel-delete") confirmingId = null;
+    if (act === "confirm-delete") {
+      state.items = state.items.filter(function (x) { return x.id !== id; });
+      confirmingId = null;
+      if (editingId === id) resetForm();
+      save(); toast("削除しました");
+    }
+    render();
+  });
+  // 投稿日・表示回数はカードの上で直接記録できる
+  $("cards").addEventListener("change", function (e) {
+    var field = e.target.getAttribute("data-field");
+    if (!field) return;
+    var it = find(e.target.closest(".card").getAttribute("data-id"));
+    if (!it) return;
+    if (field === "imps") it.imps = parseNum(e.target.value);
+    if (field === "postedAt") it.postedAt = e.target.value;
+    it.updatedAt = now();
+    save(); render(); toast("記録しました");
+  });
+
+  // ---- 仲間・オフ会・相談 ----
+  var connForm = $("conn-form");
+  function selectedCtype() { var r = connForm.querySelector('input[name="ctype"]:checked'); return r ? r.value : "friend"; }
+  connForm.addEventListener("change", function (e) {
+    if (e.target.name === "ctype") $("c-name-label").firstChild.nodeValue = CTYPE[selectedCtype()].label;
+  });
+  $("c-name").addEventListener("input", function () { if ($("c-name").value.trim()) { $("c-name").classList.remove("invalid"); $("cname-error").hidden = true; } });
+  connForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("c-name").value.trim();
+    if (!name) { $("c-name").classList.add("invalid"); $("cname-error").hidden = false; $("c-name").focus(); return; }
+    state.conns.unshift({ id: uid(), type: selectedCtype(), name: name, date: $("c-date").value, memo: $("c-memo").value, createdAt: now() });
+    save();
+    connForm.reset();
+    $("c-name-label").firstChild.nodeValue = CTYPE.friend.label;
+    toast("メモを追加しました");
+    renderConns();
+  });
+  function renderConns() {
+    var ul = $("conn-cards");
+    if (!state.conns.length) {
+      ul.innerHTML = '<li class="empty-state">まだメモがありません。出会った人やオフ会のことを書きとめておくと、体験談のネタになります。</li>';
+      return;
+    }
+    ul.innerHTML = state.conns.map(function (c) {
+      var t = CTYPE[c.type] || CTYPE.friend;
+      return '<li class="card" data-cid="' + esc(c.id) + '">' +
+        '<div class="card-top"><div><span class="small-label">' + t.label + (c.date ? "・" + fmtDate(c.date) : "") + "</span>" +
+          '<p class="theme">' + esc(c.name) + (c.sample ? '<span class="sample">見本</span>' : "") + "</p></div>" +
+          '<span class="pill ctype">' + t.name + "</span></div>" +
+        (c.memo ? '<p class="post">' + esc(c.memo) + "</p>" : "") +
+        '<div class="card-actions">' +
+          '<button type="button" class="small" data-cact="neta">ネタにする</button>' +
+          '<button type="button" class="small danger" data-cact="delete">削除</button>' +
+        "</div>" +
+        (confirmingConn === c.id ? '<div class="confirm" role="alert">このメモを削除しますか？元に戻せません。' +
+          '<button type="button" class="small danger" data-cact="confirm-delete">削除する</button>' +
+          '<button type="button" class="small" data-cact="cancel-delete">やめる</button></div>' : "") +
+        "</li>";
+    }).join("");
+  }
+  $("conn-cards").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-cact]");
+    if (!b) return;
+    var id = b.closest(".card").getAttribute("data-cid");
+    var c = state.conns.find(function (x) { return x.id === id; });
+    if (!c) return;
+    var act = b.getAttribute("data-cact");
+    if (act === "neta") {
+      // 体験の欄だけ埋めて、書くテーマは自分で決めてもらう
+      resetForm();
+      var t = CTYPE[c.type] || CTYPE.friend;
+      fExp.value = "【" + t.name + "】" + c.name + (c.date ? "（" + fmtDate(c.date) + "）" : "") + (c.memo ? "\n" + c.memo : "");
+      $("theme-error").hidden = true;
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+      fTheme.focus({ preventScroll: true });
+      toast("体験の欄に入れました。まず「書くテーマ」を決めてください");
+      return;
+    }
+    if (act === "delete") confirmingConn = id;
+    if (act === "cancel-delete") confirmingConn = null;
+    if (act === "confirm-delete") {
+      state.conns = state.conns.filter(function (x) { return x.id !== id; });
+      confirmingConn = null; save(); toast("削除しました");
+    }
+    renderConns();
+  });
+
+  // ---- コピー ----
+  function copyText(text, okMsg) {
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      toast(ok ? okMsg : "コピーできませんでした。文章を長押しして選んでコピーしてください");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, fallback);
+    else fallback();
+  }
+
+  // ---- バックアップ ----
+  $("export-btn").addEventListener("click", function () {
+    var data = {
+      app: "netastock-x", version: 1, verified: state.verified, reach: state.reach,
+      items: state.items.map(function (x) { return { theme: x.theme, exp: x.exp, draft: x.draft, status: x.status, postedAt: x.postedAt, imps: x.imps, createdAt: x.createdAt, updatedAt: x.updatedAt }; }),
+      conns: state.conns.map(function (c) { return { type: c.type, name: c.name, date: c.date, memo: c.memo, createdAt: c.createdAt }; })
+    };
+    copyText(JSON.stringify(data), "バックアップをコピーしました。メモアプリなどに貼って保管してください");
+  });
+  $("import-btn").addEventListener("click", function () {
+    var err = $("import-error");
+    err.hidden = true;
+    var raw = $("import-text").value.trim();
+    function fail(m) { err.textContent = m; err.hidden = false; }
+    if (!raw) return fail("貼り付け欄が空です。コピーしておいたバックアップを貼り付けてください。");
+    var p;
+    try { p = JSON.parse(raw); } catch (e) { return fail("バックアップの形式が読み取れませんでした。コピーした文字を途中で切らずに、すべて貼り付けてください。"); }
+    if (!p || !Array.isArray(p.items)) return fail("ネタストックのバックアップではないようです。");
+    var added = 0, t = now();
+    p.items.forEach(function (x) {
+      if (!x || typeof x.theme !== "string" || !x.theme.trim()) return;
+      var draft = typeof x.draft === "string" ? x.draft : (typeof x.caption === "string" ? x.caption : "");
+      if (state.items.some(function (y) { return y.theme === x.theme && (y.draft || "") === draft; })) return;
+      state.items.push({ id: uid(), theme: x.theme.trim(), exp: typeof x.exp === "string" ? x.exp : "", draft: draft,
+        status: STATUS[x.status] ? x.status : "idea", postedAt: typeof x.postedAt === "string" ? x.postedAt : "",
+        imps: parseNum(x.imps), createdAt: x.createdAt || t, updatedAt: x.updatedAt || t });
+      added++;
+    });
+    (Array.isArray(p.conns) ? p.conns : []).forEach(function (c) {
+      if (!c || typeof c.name !== "string" || !c.name.trim()) return;
+      if (state.conns.some(function (y) { return y.name === c.name && (y.date || "") === (c.date || ""); })) return;
+      state.conns.push({ id: uid(), type: CTYPE[c.type] ? c.type : "friend", name: c.name.trim(), date: c.date || "", memo: c.memo || "", createdAt: c.createdAt || t });
+      added++;
+    });
+    if (p.verified != null && state.verified == null) state.verified = parseNum(p.verified);
+    if (p.reach != null && state.reach == null) state.reach = parseNum(p.reach);
+    save();
+    $("import-text").value = "";
+    $("g-verified").value = state.verified == null ? "" : state.verified;
+    $("g-reach").value = state.reach == null ? "" : state.reach;
+    render();
+    toast(added ? added + "件を復元しました" : "新しく追加するものはありませんでした（すでに同じ内容があります）");
+  });
+
+  // ---- お知らせ ----
+  var toastTimer;
+  function toast(msg) {
+    var el = $("toast");
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, 2800);
+  }
+
+  updateFormMeter();
+  render();
+})();
+</script>
+</body>
+</html>
