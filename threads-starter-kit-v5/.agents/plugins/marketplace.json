@@ -1,0 +1,12 @@
+{
+  "name": "threads-starter-kit",
+  "interface": { "displayName": "Threadsスターターキット" },
+  "plugins": [
+    {
+      "name": "threads-starter-kit",
+      "source": { "source": "local", "path": "./plugin" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "threads-starter-kit",
+  "version": "5.1.0",
+  "description": "Threadsの毎日の投稿案を、実測で当たった型（1行目の3構造・画像の型3つ）から作り、出す前の3つで検品する。",
+  "author": { "name": "安藤青果" },
+  "keywords": ["threads", "sns", "投稿", "画像"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Threadsスターターキット",
+    "shortDescription": "当たった型でThreadsの投稿案と画像の指示を作る",
+    "longDescription": "初回にジャンル・名乗り・禁止事項・一番買ってほしい商品・コメントの話し方を聞き、毎日の投稿案（本文・追いリプ4本・画像の指示）を、出す前の3つの確かめ方と画像の型3つに沿って作ります。",
+    "developerName": "安藤青果",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["今日のThreadsの3本作って"]
+  }
+}
